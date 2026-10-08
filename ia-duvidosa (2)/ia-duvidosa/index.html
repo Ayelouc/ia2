@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IA Duvidosa: qual resposta é verdadeira?</title>
+<meta name="description" content="Jogo de feira de ciências sobre desinformação e deepfakes. A IA dá duas respostas e uma é falsa. Você consegue descobrir qual?">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --papel: #eef1f8;
+    --tinta: #141a33;
+    --tinta-suave: #4b5578;
+    --linha: #cfd5e6;
+    --branco: #ffffff;
+    --azul: #2b4bff;
+    --magenta: #e6208a;
+    --certo: #0b8a5f;
+    --errado: #d1293d;
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --corpo: "Figtree", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--papel);
+    color: var(--tinta);
+    font-family: var(--corpo);
+    font-size: 1.05rem;
+    line-height: 1.55;
+  }
+  :focus-visible { outline: 3px solid var(--azul); outline-offset: 3px; }
+  main { max-width: 980px; margin: 0 auto; padding: 28px 20px 72px; }
+
+  /* Topo */
+  .topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 36px; }
+  .marca { font-family: var(--display); font-weight: 800; font-size: 1.1rem; }
+  .placar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--branco); border: 2px solid var(--tinta); border-radius: 999px;
+    padding: 6px 8px 6px 16px; font-weight: 700; font-size: 0.95rem;
+  }
+  .placar button {
+    border: 0; background: var(--papel); color: var(--tinta-suave); border-radius: 999px;
+    padding: 4px 12px; font: inherit; font-weight: 500; font-size: 0.85rem; cursor: pointer;
+  }
+  .placar button:hover { background: var(--linha); }
+
+  /* Título com efeito de glitch que se estabiliza uma vez */
+  h1 {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    line-height: 1;
+    letter-spacing: -0.03em;
+    margin: 0 0 18px;
+    max-width: 12em;
+    text-shadow: 3px 0 var(--azul), -3px 0 var(--magenta);
+    animation: assentar 1.4s steps(14, end) 0.2s forwards;
+  }
+  @keyframes assentar {
+    0%   { text-shadow: 9px 0 var(--azul), -9px 0 var(--magenta); }
+    30%  { text-shadow: -6px 2px var(--azul), 6px -2px var(--magenta); }
+    60%  { text-shadow: 5px 0 var(--azul), -5px 0 var(--magenta); }
+    100% { text-shadow: 0 0 transparent, 0 0 transparent; }
+  }
+  .intro { max-width: 36em; color: var(--tinta-suave); margin: 0 0 28px; }
+
+  /* Pergunta */
+  form { display: flex; gap: 10px; max-width: 720px; }
+  input[type="text"] {
+    flex: 1; min-width: 0;
+    padding: 15px 18px; border: 2px solid var(--tinta); border-radius: 14px;
+    background: var(--branco); color: var(--tinta); font: inherit;
+  }
+  input[type="text"]::placeholder { color: #7d86a6; }
+  .btn-principal {
+    border: 2px solid var(--tinta); background: var(--tinta); color: var(--branco);
+    border-radius: 14px; padding: 15px 24px; font: inherit; font-weight: 700; cursor: pointer;
+  }
+  .btn-principal:hover:not(:disabled) { background: var(--azul); border-color: var(--azul); }
+  .btn-principal:disabled { opacity: 0.55; cursor: wait; }
+  .sugestoes { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+  .sugestoes button {
+    border: 1.5px solid var(--linha); background: transparent; color: var(--tinta-suave);
+    border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 0.9rem; cursor: pointer;
+  }
+  .sugestoes button:hover { border-color: var(--tinta); color: var(--tinta); }
+
+  /* Rodada */
+  #rodada { margin-top: 44px; }
+  .pergunta-atual { font-family: var(--display); font-weight: 500; font-size: clamp(1.4rem, 3.4vw, 2rem); line-height: 1.2; margin: 0 0 6px; }
+  .instrucao { color: var(--tinta-suave); margin: 0 0 22px; }
+  .duelo { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .resposta {
+    position: relative; background: var(--branco); border: 2px solid var(--tinta); border-radius: 18px;
+    padding: 22px 22px 20px; display: flex; flex-direction: column;
+  }
+  .resposta.a { box-shadow: 8px 8px 0 var(--azul); }
+  .resposta.b { box-shadow: 8px 8px 0 var(--magenta); }
+  .letra { font-family: var(--display); font-weight: 800; font-size: 2.6rem; line-height: 1; margin-bottom: 10px; }
+  .a .letra { color: var(--azul); }
+  .b .letra { color: var(--magenta); }
+  .resposta p { margin: 0 0 20px; flex: 1; }
+  .escolher {
+    border: 2px solid var(--tinta); background: var(--branco); color: var(--tinta); border-radius: 12px;
+    padding: 12px 16px; font: inherit; font-weight: 700; cursor: pointer;
+  }
+  .escolher:hover { background: var(--tinta); color: var(--branco); }
+
+  /* Depois de escolher */
+  .resposta.revelada .escolher { display: none; }
+  .selo {
+    display: none; align-self: flex-start; align-items: center; gap: 8px;
+    font-weight: 800; font-size: 1rem; padding: 6px 14px; border-radius: 10px; color: var(--branco);
+    transform: rotate(-3deg);
+  }
+  .resposta.revelada .selo { display: inline-flex; }
+  .resposta.verdadeira { border-color: var(--certo); }
+  .resposta.verdadeira .selo { background: var(--certo); }
+  .resposta.falsa { border-color: var(--errado); }
+  .resposta.falsa .selo { background: var(--errado); }
+  .resposta.falsa p { text-decoration: line-through; text-decoration-color: rgba(209, 41, 61, 0.45); text-decoration-thickness: 1.5px; }
+  .sua-escolha { font-size: 0.85rem; font-weight: 700; color: var(--tinta-suave); margin-top: -8px; margin-bottom: 14px; display: none; }
+  .resposta.minha .sua-escolha { display: block; }
+
+  .resultado {
+    margin-top: 32px; background: var(--branco); border: 2px solid var(--tinta); border-radius: 18px; padding: 24px;
+  }
+  .resultado h2 { font-family: var(--display); font-weight: 800; font-size: 1.7rem; margin: 0 0 10px; }
+  .resultado h2.acerto { color: var(--certo); }
+  .resultado h2.erro { color: var(--errado); }
+  .resultado p { margin: 0 0 10px; max-width: 46em; }
+  .resultado .dica { background: var(--papel); border-radius: 12px; padding: 12px 16px; margin: 14px 0 20px; }
+  .resultado .dica strong { display: block; }
+
+  /* Carregando */
+  .carregando .resposta { border-style: dashed; box-shadow: none; }
+  .esqueleto { height: 14px; border-radius: 7px; background: var(--linha); margin-bottom: 10px; animation: pulsar 1.2s ease-in-out infinite alternate; }
+  @keyframes pulsar { from { opacity: 0.4; } to { opacity: 1; } }
+
+  .mensagem { background: var(--branco); border: 2px dashed var(--tinta-suave); border-radius: 18px; padding: 20px 22px; max-width: 640px; }
+
+  /* Rodapé */
+  .rodape { margin-top: 72px; border-top: 2px solid var(--linha); padding-top: 28px; }
+  .rodape h2 { font-family: var(--display); font-weight: 800; font-size: 1.5rem; margin: 0 0 14px; }
+  .rodape ul { margin: 0; padding-left: 20px; max-width: 46em; color: var(--tinta-suave); }
+  .rodape li { margin-bottom: 6px; }
+  .rodape small { display: block; margin-top: 22px; color: var(--tinta-suave); }
+
+  @media (max-width: 720px) {
+    .duelo { grid-template-columns: 1fr; gap: 26px; }
+    form { flex-direction: column; }
+    .topo { margin-bottom: 24px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    h1 { animation: none; text-shadow: none; }
+    .esqueleto { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header class="topo">
+    <span class="marca">IA Duvidosa</span>
+    <div class="placar" aria-live="polite">
+      <span id="placar-texto">Acertos: 0 de 0</span>
+      <button type="button" id="zerar">Zerar</button>
+    </div>
+  </header>
+
+  <h1>Qual das duas respostas é verdadeira?</h1>
+  <p class="intro">
+    Faça uma pergunta e a IA vai responder duas vezes. Uma resposta é correta e a outra é inventada de propósito,
+    com o mesmo jeito confiante. Este site é uma demonstração sobre desinformação e deepfakes: nada do que for falso aqui deve ser levado a sério.
+  </p>
+
+  <form id="form">
+    <label for="pergunta" hidden>Sua pergunta</label>
+    <input type="text" id="pergunta" maxlength="300" placeholder="Ex.: Por que o céu é azul?" required autocomplete="off">
+    <button type="submit" class="btn-principal" id="enviar">Perguntar</button>
+  </form>
+
+  <ul class="sugestoes" aria-label="Sugestões de perguntas">
+    <li><button type="button" data-q="Por que o céu é azul?">Por que o céu é azul?</button></li>
+    <li><button type="button" data-q="Qual é o maior animal do mundo?">Qual o maior animal do mundo?</button></li>
+    <li><button type="button" data-q="Quantos planetas existem no sistema solar?">Quantos planetas existem?</button></li>
+    <li><button type="button" data-q="Como as abelhas fazem mel?">Como as abelhas fazem mel?</button></li>
+    <li><button type="button" data-q="Por que o mar é salgado?">Por que o mar é salgado?</button></li>
+  </ul>
+
+  <section id="rodada" aria-live="polite"></section>
+
+  <section class="rodape">
+    <h2>Como não cair em desinformação e deepfakes</h2>
+    <ul>
+      <li>Texto, áudio ou vídeo perfeito demais não é prova de verdade. A IA escreve com a mesma segurança quando erra.</li>
+      <li>Procure a fonte original e confirme em mais de um lugar confiável.</li>
+      <li>Pesquise a imagem ou o vídeo para ver se já apareceu em outro contexto.</li>
+      <li>Em vídeos, observe piscadas, sombras, boca e voz fora de sincronia.</li>
+      <li>Conteúdo que provoca raiva ou medo forte merece ainda mais cuidado. Na dúvida, não compartilhe.</li>
+    </ul>
+    <small>Projeto educativo de feira de ciências. As respostas falsas são geradas de propósito por uma IA.</small>
+  </section>
+</main>
+
+<script>
+  const form = document.getElementById("form");
+  const campo = document.getElementById("pergunta");
+  const botao = document.getElementById("enviar");
+  const rodada = document.getElementById("rodada");
+  const placarTexto = document.getElementById("placar-texto");
+
+  let acertos = 0;
+  let total = 0;
+
+  function atualizarPlacar() {
+    placarTexto.textContent = "Acertos: " + acertos + " de " + total;
+  }
+
+  document.getElementById("zerar").addEventListener("click", () => {
+    acertos = 0;
+    total = 0;
+    atualizarPlacar();
+  });
+
+  document.querySelectorAll(".sugestoes button").forEach((b) => {
+    b.addEventListener("click", () => {
+      campo.value = b.dataset.q;
+      form.requestSubmit();
+    });
+  });
+
+  function el(tag, classe, texto) {
+    const e = document.createElement(tag);
+    if (classe) e.className = classe;
+    if (texto !== undefined) e.textContent = texto;
+    return e;
+  }
+
+  function mostrarCarregando(pergunta) {
+    rodada.innerHTML = "";
+    const bloco = el("div", "carregando");
+    bloco.append(el("h2", "pergunta-atual", pergunta), el("p", "instrucao", "A IA está escrevendo duas respostas..."));
+    const duelo = el("div", "duelo");
+    ["a", "b"].forEach((l) => {
+      const r = el("div", "resposta " + l);
+      r.append(el("div", "letra", l.toUpperCase()));
+      for (let i = 0; i < 3; i++) r.append(el("div", "esqueleto"));
+      duelo.append(r);
+    });
+    bloco.append(duelo);
+    rodada.append(bloco);
+  }
+
+  function mostrarMensagem(texto) {
+    rodada.innerHTML = "";
+    rodada.append(el("div", "mensagem", texto));
+  }
+
+  function mostrarDuelo(pergunta, dados) {
+    // Sorteia em qual lado fica a resposta falsa
+    const falsaNaA = Math.random() < 0.5;
+    const opcoes = falsaNaA
+      ? [{ texto: dados.resposta_falsa, falsa: true }, { texto: dados.resposta_verdadeira, falsa: false }]
+      : [{ texto: dados.resposta_verdadeira, falsa: false }, { texto: dados.resposta_falsa, falsa: true }];
+
+    rodada.innerHTML = "";
+    const bloco = el("div");
+    bloco.append(
+      el("h2", "pergunta-atual", pergunta),
+      el("p", "instrucao", "Uma destas respostas é inventada. Qual é a verdadeira?")
+    );
+
+    const duelo = el("div", "duelo");
+    const cartoes = opcoes.map((op, i) => {
+      const letra = i === 0 ? "a" : "b";
+      const cartao = el("article", "resposta " + letra);
+      const selo = el("span", "selo", op.falsa ? "✕ Falsa" : "✓ Verdadeira");
+      cartao.append(
+        el("div", "letra", letra.toUpperCase()),
+        selo,
+        el("p", "", op.texto),
+        el("div", "sua-escolha", "Sua escolha")
+      );
+      const btn = el("button", "escolher", "Esta é a verdadeira");
+      btn.type = "button";
+      btn.setAttribute("aria-label", "Escolher a resposta " + letra.toUpperCase() + " como verdadeira");
+      cartao.append(btn);
+      duelo.append(cartao);
+      return { cartao, op, btn, letra };
+    });
+    bloco.append(duelo);
+    rodada.append(bloco);
+
+    function escolher(indice) {
+      const acertou = !opcoes[indice].falsa;
+      total++;
+      if (acertou) acertos++;
+      atualizarPlacar();
+
+      cartoes.forEach((c, i) => {
+        c.cartao.classList.add("revelada", c.op.falsa ? "falsa" : "verdadeira");
+        if (i === indice) c.cartao.classList.add("minha");
+        c.btn.disabled = true;
+      });
+
+      const letraFalsa = opcoes[0].falsa ? "A" : "B";
+      const resultado = el("section", "resultado");
+      resultado.append(
+        el("h2", acertou ? "acerto" : "erro", acertou ? "Você acertou!" : "Esta enganou você."),
+        el("p", "", acertou
+          ? "A resposta falsa era a " + letraFalsa + ". " + (dados.explicacao || "")
+          : "A resposta falsa era a " + letraFalsa + ". " + (dados.explicacao || "") + " Uma IA consegue soar igualmente confiante dizendo a verdade ou uma invenção.")
+      );
+      if (dados.dica) {
+        const dica = el("p", "dica");
+        dica.append(el("strong", "", "Como checar"), document.createTextNode(dados.dica));
+        resultado.append(dica);
+      }
+      const outra = el("button", "btn-principal", "Fazer outra pergunta");
+      outra.type = "button";
+      outra.addEventListener("click", () => {
+        campo.focus();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+      resultado.append(outra);
+      bloco.append(resultado);
+      resultado.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    cartoes.forEach((c, i) => c.btn.addEventListener("click", () => escolher(i)));
+    duelo.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const pergunta = campo.value.trim();
+    if (!pergunta) return;
+    botao.disabled = true;
+    campo.value = "";
+    mostrarCarregando(pergunta);
+    try {
+      const resp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pergunta }),
+      });
+      const bruto = await resp.text();
+      let dados = null;
+      try { dados = bruto ? JSON.parse(bruto) : null; } catch (e) { dados = null; }
+      if (!dados) {
+        throw new Error("O servidor da IA não respondeu. A função provavelmente não foi publicada junto com o site (veja o README).");
+      }
+      if (!resp.ok) throw new Error(dados.erro || "Não foi possível obter as respostas.");
+      if (dados.recusou) {
+        mostrarMensagem(dados.mensagem);
+      } else {
+        mostrarDuelo(pergunta, dados);
+      }
+    } catch (err) {
+      if (location.protocol === "file:") {
+        mostrarMensagem("Este arquivo foi aberto direto do computador, e assim a IA não funciona. Publique o projeto na Vercel e abra o link que ela gerar (veja o README).");
+      } else if (err instanceof TypeError) {
+        mostrarMensagem("Não consegui falar com o servidor da IA. Confira se a pasta api foi publicada junto com o site e tente de novo.");
+      } else {
+        mostrarMensagem(err.message + " Tente perguntar de novo.");
+      }
+    } finally {
+      botao.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
